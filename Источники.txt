@@ -1,5 +1,6 @@
 # ИСТОЧНИКИ СОДЕРЖАЩИЕ КОНФИГИ VLESS
 # Обновлено: 2026-04-08 20:50:00
+https://raw.githubusercontent.com/ByeWhiteLists/ByeWhiteLists2/refs/heads/main/ByeWhiteLists2.txt
 https://raw.githubusercontent.com/0i0/deepme-crawler/main/crawled.repos/T.txt
 https://raw.githubusercontent.com/0i0/deepme-crawler/main/crawled.repos/h.txt
 https://raw.githubusercontent.com/0i0/deepme-crawler/main/crawled.repos/v.txt
