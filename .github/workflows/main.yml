@@ -28,13 +28,16 @@ jobs:
 
       - name: Install Xray Core
         run: |
-          LATEST_URL=$(curl -s https://api.github.com/repos/XTLS/Xray-core/releases/latest | grep "browser_download_url.*Xray-linux-64.zip" | cut -d '"' -f 4)
-          curl -L "$LATEST_URL" -o xray.zip
+          # Качаем напрямую стабильную версию 1.8.4 (или любую свежую)
+          curl -L "https://github.com/XTLS/Xray-core/releases/download/v1.8.4/Xray-linux-64.zip" -o xray.zip
           unzip -o xray.zip
           chmod +x xray
-          # Копируем и в систему, и в корень репо для надежности
+          # Проверяем, что файл реально есть
+          ls -l xray
+          # Копируем в систему и в папку со скриптом
           sudo cp xray /usr/local/bin/
-          cp xray ./xray 
+          cp xray ./xray
+          echo "✅ Xray установлен и готов к бою"
 
       - name: Run V.O.I.D Parser
         run: |
