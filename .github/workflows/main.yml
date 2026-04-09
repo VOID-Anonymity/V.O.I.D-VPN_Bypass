@@ -1,0 +1,40 @@
+name: Update VLESS Configs
+
+on:
+  schedule:
+    # Запуск каждые 55 минут
+    - cron: '*/55 * * * *'
+  workflow_dispatch: # Позволяет запускать скрипт вручную кнопкой
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    # Даем права на запись, чтобы скрипт мог обновить файлы в репозитории
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          pip install requests
+          # Добавь сюда другие библиотеки, если они нужны твоему парсеру
+
+      - name: Run parser
+        run: python your_script_name.py  # Замени на имя своего файла
+
+      - name: Commit and push changes
+        run: |
+          git config --local user.email "github-actions[bot]@users.noreply.github.com"
+          git config --local user.name "github-actions[bot]"
+          git add .
+          git commit -m "Auto-update configs: $(date)" || echo "No changes to commit"
+          git push
