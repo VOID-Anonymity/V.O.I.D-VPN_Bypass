@@ -1,16 +1,15 @@
-name: Update VLESS Configs
+name: V.O.I.D Parser Auto-Update
 
 on:
   schedule:
     # Запуск каждые 55 минут
     - cron: '*/55 * * * *'
-  workflow_dispatch: # Позволяет запускать скрипт вручную кнопкой
+  workflow_dispatch: # Позволяет запускать вручную для теста
 
 jobs:
   build:
     runs-on: ubuntu-latest
     
-    # Даем права на запись, чтобы скрипт мог обновить файлы в репозитории
     permissions:
       contents: write
 
@@ -25,18 +24,29 @@ jobs:
 
       - name: Install dependencies
         run: |
-          pip install requests
-          pip install aiofiles
-          pip install aiohttp
-          # Добавь сюда другие библиотеки, если они нужны твоему парсеру
+          pip install requests aiohttp aiofiles
 
-      - name: Run parser
-        run: python parser.py  # Замени на имя своего файла
+      - name: Install Xray Core
+        run: |
+          # Скачиваем последнюю версию Xray для проверки конфигов
+          LATEST_URL=$(curl -s https://api.github.com/repos/XTLS/Xray-core/releases/latest | grep "browser_download_url.*Xray-linux-64.zip" | cut -d '"' -f 4)
+          curl -L "$LATEST_URL" -o xray.zip
+          unzip xray.zip
+          chmod +x xray
+          # Переносим в PATH, чтобы скрипт видел команду 'xray'
+          sudo mv xray /usr/local/bin/
+
+      - name: Run V.O.I.D Parser
+        run: |
+          # Создаем папки, если их нет, чтобы скрипт не вылетал
+          mkdir -p configs
+          python parser.py
 
       - name: Commit and push changes
         run: |
           git config --local user.email "github-actions[bot]@users.noreply.github.com"
           git config --local user.name "github-actions[bot]"
           git add .
-          git commit -m "Auto-update configs: $(date)" || echo "No changes to commit"
+          # Коммитим только если файлы реально изменились
+          git commit -m "🌑 VOID: Эфир обновлен $(date +'%Y-%m-%d %H:%M')" || echo "Изменений не обнаружено"
           git push
