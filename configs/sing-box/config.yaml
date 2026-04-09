@@ -1,7 +1,5 @@
-# Sing-box subscription for RKP channel
-# Generated automatically from url_work.txt
-# Total proxies: 1968/1968
-# Last updated: 2026-03-05 20:48:12
+# Sing-box by V.O.I.D Project
+# Last updated: 2026-04-09 12:15:00
 
 outbounds:
 - type: vless
