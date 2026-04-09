@@ -1,6 +1,6 @@
-#profile-title: V.O.I.D_Bypass
+#profile-title: V.O.I.D Bypass
 #profile-update-interval: 1
-#announce: V.O.I.D
+#announce: V.O.I.D behind For freedom
 #subscription-userinfo: upload=0; download=0; total=0; expire=0
 
 vless://034f514d-a3f3-4e94-a3eb-b5338e8b93fa@212.11.62.165:8443?encryption=none&flow=xtls-rprx-vision&type=tcp&security=reality&sni=ya.ru&fp=ios&pbk=gbP2G_j0cmFvgmWaWLpzZavEzQiPzky-fApmbF2BWxU&sid=f03597&spx=%252F#TCP%2C%20%D0%AF%D0%BD%D0%B4%D0%B5%D0%BA%D1%81%20%5BV.O.I.D%5D
