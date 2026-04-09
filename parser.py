@@ -372,17 +372,31 @@ async def fetch(session, url, sem):
             await log(f"Ошибка при скачивании {url}: {e}")
     return None
 
-async def process_url(session, url, sem, results_list, stats):
+async def process_url(session, url, sem, output_queue, stats_lock, stats):
     content = await fetch(session, url, sem)
-    stats["processed"] += 1
+    async with stats_lock:
+        stats["processed"] += 1
 
     if content:
         matches = VLESS_REGEX.findall(content)
         if matches:
-            results_list.extend(matches)
-            stats["found"] += len(matches)
+            async with stats_lock:
+                stats["found"] += len(matches)
+            for match in matches:
+                await output_queue.put(match)
 
-    print(f"Обработано: {stats['processed']} | Найдено VLESS: {stats['found']}", end="\r")
+    async with stats_lock:
+        print(f"Обработано: {stats['processed']} | Найдено VLESS: {stats['found']}", end="\r")
+
+async def writer_task(output_queue, output_file):
+    """Асинхронно пишет строки из очереди в файл."""
+    async with aiofiles.open(output_file, "w", encoding="utf-8") as f:
+        while True:
+            line = await output_queue.get()
+            if line is None:  # сигнал завершения
+                break
+            await f.write(line + "\n")
+            output_queue.task_done()
 
 # ========= ОЧИСТКА =========
 async def clean_vless():
@@ -465,7 +479,6 @@ async def rename_configs():
                 if human_name == "Неизвестно" and domains:
                     human_name = domains[0].split('.')[-2].capitalize() if len(domains[0].split('.')) >= 2 else domains[0]
 
-            # Использование V.O.I.D без дополнительных символов (чистый тег)
             title = f"{protocol}, {human_name} [V.O.I.D]"
             base = url.split("#", 1)[0]
             new_url = f"{base}#{title}"
@@ -479,6 +492,7 @@ async def rename_configs():
 
 # ========= НОРМАЛИЗАЦИЯ И КОДИРОВАНИЕ URL =========
 def encode_vless_url(url: str) -> str:
+    """Корректное кодирование VLESS URL, сохраняя уже закодированные символы."""
     try:
         if not url.startswith("vless://"): return url
         
@@ -512,20 +526,26 @@ def encode_vless_url(url: str) -> str:
                 fragment = params_part[hash_pos+1:]
                 params_part = params_only
         
-        params = dict(urllib.parse.parse_qsl(params_part))
+        # Парсим параметры с сохранением оригинального кодирования
+        params = dict(urllib.parse.parse_qsl(params_part, keep_blank_values=True))
         encoded_params = []
         for k, v in params.items():
             if k in ['security', 'type', 'fp', 'pbk', 'sid', 'flow']:
                 encoded_params.append(f"{k}={v}")
             else:
-                encoded_params.append(f"{k}={urllib.parse.quote(v, safe='')}")
+                # Кодируем значение, но оставляем уже закодированные %XX
+                # Для простоты используем quote с safe='%'
+                encoded_v = urllib.parse.quote(v, safe='%')
+                encoded_params.append(f"{k}={encoded_v}")
         
         new_params = "&".join(encoded_params)
         
+        # Фрагмент кодируем только если есть не-ASCII символы
         try:
-            encoded_fragment = urllib.parse.quote(fragment, safe='') if fragment and any(ord(c) > 127 for c in fragment) else fragment
-        except:
+            fragment.encode('ascii')
             encoded_fragment = fragment
+        except UnicodeEncodeError:
+            encoded_fragment = urllib.parse.quote(fragment, safe='')
         
         base = f"vless://{uuid}@{host_only}"
         if new_params: base += f"?{new_params}"
@@ -641,36 +661,50 @@ class XrayTester:
         self.max_retries = MAX_RETRIES
         self.retry_delay = RETRY_DELAY
         self.xray_dir = Path('./xray_bin')
-        self.xray_path = self.xray_dir / 'xray.exe'
+        self.xray_path = self.xray_dir / ('xray.exe' if os.name == 'nt' else 'xray')
         self.port_manager = PortManager()
         self.debug_file = DEBUG_FILE
         self.xray_log_file = XRAY_LOG_FILE
         
         print(f"🔍 XrayTester инициализирован")
-        self.check_xray()
+        # Синхронная проверка наличия Xray при инициализации (вызывается из executor)
+        self._ensure_xray()
 
-    def check_xray(self):
+    def _ensure_xray(self):
+        """Проверяет наличие Xray и скачивает при необходимости."""
         if not self.xray_path.exists():
             print("⬇️ Скачиваю Xray...")
-            self.download_xray()
+            self._download_xray()
         else:
             try:
                 result = subprocess.run([str(self.xray_path), '-version'], capture_output=True, text=True, timeout=5)
                 version = result.stdout.split('\n')[0] if result.stdout else 'Unknown'
                 print(f"✅ Xray готов: {version}")
             except Exception as e:
-                print(f"⚠️ Ошибка версии Xray: {e}")
+                print(f"⚠️ Ошибка версии Xray: {e}, пробую переустановить")
+                self._download_xray()
 
-    def download_xray(self):
-        import urllib.request, zipfile
+    def _download_xray(self):
+        """Загружает Xray с официального репозитория."""
+        import urllib.request, zipfile, platform
         self.xray_dir.mkdir(exist_ok=True)
-        url = "https://github.com/XTLS/Xray-core/releases/latest/download/Xray-windows-64.zip"
+        system = platform.system().lower()
+        if system == 'windows':
+            url = "https://github.com/XTLS/Xray-core/releases/latest/download/Xray-windows-64.zip"
+        elif system == 'linux':
+            url = "https://github.com/XTLS/Xray-core/releases/latest/download/Xray-linux-64.zip"
+        else:
+            raise RuntimeError(f"Unsupported OS: {system}")
+        
         zip_path = self.xray_dir / "xray.zip"
         try:
             urllib.request.urlretrieve(url, zip_path)
             with zipfile.ZipFile(zip_path, 'r') as zip_ref:
                 zip_ref.extractall(self.xray_dir)
             zip_path.unlink()
+            # Устанавливаем права на исполнение для Linux/Mac
+            if os.name != 'nt':
+                os.chmod(self.xray_path, 0o755)
             print("✅ Xray загружен")
         except Exception as e:
             print(f"❌ Ошибка загрузки Xray: {e}")
@@ -736,6 +770,14 @@ class XrayTester:
         except Exception:
             return None
 
+    def _read_stderr(self, process):
+        """Читает stderr процесса, чтобы избежать блокировки."""
+        try:
+            for line in process.stderr:
+                pass  # игнорируем
+        except:
+            pass
+
     def test_with_xray(self, parsed, port, attempt=1):
         config_file, process = None, None
         try:
@@ -748,7 +790,16 @@ class XrayTester:
                 json.dump(config, f)
             
             creationflags = subprocess.CREATE_NO_WINDOW if os.name == "nt" else 0
-            process = subprocess.Popen([str(self.xray_path), '-c', config_file], stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True, creationflags=creationflags)
+            process = subprocess.Popen(
+                [str(self.xray_path), '-c', config_file],
+                stdout=subprocess.DEVNULL,
+                stderr=subprocess.PIPE,
+                text=True,
+                creationflags=creationflags
+            )
+            # Запускаем поток для чтения stderr
+            stderr_thread = threading.Thread(target=self._read_stderr, args=(process,), daemon=True)
+            stderr_thread.start()
             
             time.sleep(1.0)
             if process.poll() is not None:
@@ -773,7 +824,7 @@ class XrayTester:
             if process:
                 try: 
                     process.terminate()
-                    process.wait(timeout=1.0)
+                    process.wait(timeout=2.0)
                 except: 
                     process.kill()
             if config_file and os.path.exists(config_file):
@@ -878,17 +929,20 @@ async def main_cycle():
     print(f"📥 Загружаю {len(urls)} источников...")
     
     sem = asyncio.Semaphore(THREADS_DOWNLOAD)
-    results_list = []
+    output_queue = asyncio.Queue()
     stats = {"processed": 0, "found": 0}
-
+    stats_lock = asyncio.Lock()
+    
+    # Запускаем писатель в фоне
+    writer = asyncio.create_task(writer_task(output_queue, OUTPUT_FILE))
+    
     async with aiohttp.ClientSession() as session:
-        tasks = [process_url(session, url, sem, results_list, stats) for url in urls]
+        tasks = [process_url(session, url, sem, output_queue, stats_lock, stats) for url in urls]
         await asyncio.gather(*tasks)
-
-    # Пакетная запись после завершения парсинга
-    if results_list:
-        async with aiofiles.open(OUTPUT_FILE, "w", encoding="utf-8") as f:
-            await f.write("\n".join(results_list) + "\n")
+    
+    # Сигнализируем писателю о завершении
+    await output_queue.put(None)
+    await writer
 
     print(f"\n✅ Скачивание завершено. Найдено VLESS: {stats['found']}")
     await log(f"Скачивание завершено. Найдено VLESS: {stats['found']}")
@@ -917,6 +971,8 @@ async def run_forever():
         except KeyboardInterrupt:
             break
         except Exception as e:
+            print(f"⚠️ Критическая ошибка в цикле: {e}")
+            await log(f"Критическая ошибка: {e}")
             await asyncio.sleep(60)
 
 if __name__ == "__main__":
