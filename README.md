@@ -22,6 +22,13 @@
 * **iOS:** [V2Box](https://apps.apple.com/us/app/v2box-v2ray-client/id6446814690) / [Streisand](https://apps.apple.com/us/app/streisand/id6450534064) / [Happ](https://apps.apple.com/us/app/happ-proxy-utility/id6504287215)
 * **Linux:** [Throne](https://github.com/throneproj/Throne) / [Hiddify](https://github.com/hiddify/hiddify-app) / [V2rayA](https://github.com/v2rayA/v2rayA)
 
+### Quick Start Guide
+
+1. **Download:** Выбери клиент из списка выше для своей системы.
+2. **Copy:** Скопируй нужную ссылку из папки `configs` (или прямую Raw-ссылку выше).
+3. **Import:** В приложении нажми `Import from Clipboard` (или значок `+`).
+4. **Connect:** Выбери сервер и нажми кнопку подключения (Сначала пропингуй)
+
 Проект «VOID» — это независимый орден, созданный для поддержания чистоты и силы эфира для жителей Срединных Земель.
 
     Орден не служит для обхода законов Инквизиции и не открывает порталы к запретным манускриптам из черных списков.
