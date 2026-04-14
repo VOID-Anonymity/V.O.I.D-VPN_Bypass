@@ -15,6 +15,13 @@
 
 Свиток уходит в поход за шкурами каждые 55 минут
 
+### Recommended Clients
+
+* **Windows:** [Happ](https://github.com/Happ-proxy/happ-desktop) / [Throne](https://github.com/throneproj/Throne) / [Hiddify](https://github.com/hiddify/hiddify-app)
+* **Android:** [v2rayNG](https://github.com/2dust/v2rayNG) / [v2rayTun](https://play.google.com/store/apps/details?id=com.v2raytun.android&hl=en-US&pli=1) / [V2Plus](http://fhosting.icu/)
+* **iOS:** [V2Box](https://apps.apple.com/us/app/v2box-v2ray-client/id6446814690) / [Streisand](https://apps.apple.com/us/app/streisand/id6450534064) / [Happ](https://apps.apple.com/us/app/happ-proxy-utility/id6504287215)
+* **Linux:** [Throne](https://github.com/throneproj/Throne) / [Hiddify](https://github.com/hiddify/hiddify-app) / [V2rayA](https://github.com/v2rayA/v2rayA)
+
 Проект «VOID» — это независимый орден, созданный для поддержания чистоты и силы эфира для жителей Срединных Земель.
 
     Орден не служит для обхода законов Инквизиции и не открывает порталы к запретным манускриптам из черных списков.
